@@ -1,0 +1,36 @@
+# dune
+_build/
+*.install
+
+# opam
+_opam/
+
+# Coq
+.*.aux
+.*.d
+*.glob
+*.vo
+*.vio
+*.vok
+*.vos
+.lia.cache
+
+# OCaml
+*.a
+*.cmxa
+*.cmxs
+*.d
+*.o
+*.cmi
+*.cmx
+*.cmo
+plugins/exec/g_freespec_exec.ml
+
+Makefile*
+.merlin
+
+# generated docs
+html
+mlihtml
+docs/coq
+docs/ml
