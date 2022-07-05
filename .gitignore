@@ -3,7 +3,7 @@ _build/
 *.install
 
 # opam
-_opam/
+_opam
 
 # Coq
 .*.aux
@@ -28,6 +28,9 @@ plugins/exec/g_freespec_exec.ml
 
 Makefile*
 .merlin
+
+# VSCode
+.vscode
 
 # generated docs
 html
