@@ -1,8 +1,14 @@
 From Coq Require Import Arith String Streams.
 From FreeSpec.Core Require Import Core CoreFacts.
+From ExtLib Require Import Monad MonadFix.
+From Coq.Strings Require Import String.
+(* From FreeSpec Require Import Build. *)
+Generalizable All Variables.
 
 Open Scope nat_scope.
-
+Open Scope string_scope.
+Import MonadLetNotation.
+Open Scope monad_scope.
 (** * Specifying the Guess Game *)
 
 Inductive CONSOLE : interface :=
@@ -125,8 +131,8 @@ CoFixpoint nat_inf (n:nat) : Stream nat :=
 (** * Execution examples *)
 Definition base_semantic := console (nat_inf 0) [].
 
-(* Compute (eval_effect base_semantic (ReadNat _)).
-(* >> 0 *)
+Compute (eval_effect base_semantic (ReadNat _)).
+(* >> 0
 
 Compute (exec_effect base_semantic (Write "hello world !")).
 (* >> _ ["hello world !"] *)

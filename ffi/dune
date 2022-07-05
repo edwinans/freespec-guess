@@ -1,0 +1,15 @@
+(library
+ (name ffi)
+ (libraries unix))
+
+(coq.theory
+ (name FFI))
+
+(rule
+ (target Console.v)
+ (action
+  (run coqffi %{cmi:console} -o %{target})))
+
+; (rule
+;   (target Proc.v)
+;   (action (run coqffi -ftransparent-types %{cmi:proc} -o %{target})))
