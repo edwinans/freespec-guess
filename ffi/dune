@@ -1,15 +1,10 @@
 (library
- (name ffi)
- (libraries unix))
+ (name console))
 
 (coq.theory
- (name FFI))
+ (name FreeSpec.Example.ffi))
 
 (rule
  (target Console.v)
  (action
-  (run coqffi %{cmi:console} -o %{target})))
-
-; (rule
-;   (target Proc.v)
-;   (action (run coqffi -ftransparent-types %{cmi:proc} -o %{target})))
+  (run coqffi -finterface %{cmi:console} -o %{target})))
