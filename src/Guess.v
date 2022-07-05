@@ -1,34 +1,20 @@
 From Coq Require Import Arith String Streams.
 From FreeSpec.Core Require Import Core CoreFacts.
-From ExtLib Require Import Monad MonadFix.
-From Coq.Strings Require Import String.
-(* From FreeSpec Require Import Build. *)
-Generalizable All Variables.
+From FreeSpec.FFI Require Import FFI.
+From FreeSpec.Example.ffi Require Import Console.
 
-Open Scope nat_scope.
-Open Scope string_scope.
-Import MonadLetNotation.
-Open Scope monad_scope.
+Open Scope i63_scope.
+
 (** * Specifying the Guess Game *)
 
-Inductive CONSOLE : interface :=
-| ReadNat : unit -> CONSOLE nat
-| Write : string -> CONSOLE unit.
-
 Generalizable All Variables.
 
-Definition read_nat `{Provide ix CONSOLE} (u : unit) : impure ix nat :=
-  request (ReadNat u).
-
-Definition write `{Provide ix CONSOLE} (s : string) : impure ix unit :=
-  request (Write s).
-
 (** * Definition of a semantic for the [CONSOLE] interface *)
-CoFixpoint console (in_flow : Stream nat) (out_flow : list string)
+CoFixpoint console (in_flow : Stream i63) (out_flow : list string)
   : semantics (CONSOLE) :=
   mk_semantics (fun α (c : CONSOLE α) =>
                   match c with
-                  | ReadNat _ => (
+                  | Read_nat _ => (
                       Streams.hd in_flow,
                       console (Streams.tl in_flow) out_flow
                     )
@@ -37,23 +23,22 @@ CoFixpoint console (in_flow : Stream nat) (out_flow : list string)
                     )
                   end).
 
-(** * The guess game loop logic *)                  
-Fixpoint guess `{Provide ix CONSOLE} (target max_attempt : nat)
-  : impure ix unit :=
-  match max_attempt with 
-  | 0 => write "Game Over: max attempt limit exceeded"
-  | S m =>
-    let* _ := write "Guess the number:" in
-    let* g := read_nat tt in 
-      if g =? target then 
-        write "Won !"
-      else if g <? target then 
-        write "The target is greater";;
-        guess target m
-      else 
-        write "The target is smaller";;
-        guess target m
-  end.
+Fixpoint guess `{MonadConsole m, Monad m} (target : i63) (max_attempt : nat)
+  : m unit :=
+match max_attempt with 
+| O => write "Game Over: max attempt limit exceeded"
+| S m =>
+  let* _ := write "Guess the number:" in
+  let* g := read_nat tt in 
+    if (g =? target)%i63 then 
+      write "Won !"
+    else if (g <? target)%i63 then 
+      write "The target is greater";;
+      guess target m
+    else 
+      write "The target is smaller";;
+      guess target m
+end.
 
 Inductive game_state : Type :=
 | Won : game_state
@@ -63,7 +48,7 @@ Inductive game_state : Type :=
 | GEqual : game_state.
 
 Record game : Type := mkGame
-  { target : nat
+  { target : i63
   ; max_attempt : nat 
   ; state : game_state
   }.
@@ -73,25 +58,25 @@ Inductive guess_state : Type :=
 | Retry : guess_state 
 | Guessed : guess_state.
 
-Definition guess_update (target : nat)
+Definition guess_update (target : i63)
   (g : guess_state) (α: Type) (c : CONSOLE α) (x : α) : guess_state :=
   match g,c,x with 
-  | Retry, ReadNat _, n =>
-    if n =? target then Guessed else Retry 
+  | Retry, Read_nat _, n =>
+    if (n =? target) then Guessed else Retry 
   | _, _, _ => g end.
 
 Inductive guess_caller_obligation : guess_state -> 
     forall (α : Type), CONSOLE α -> Prop :=
   (* can always retry for now *)
   | retry (u : unit) (g : guess_state)
-    : guess_caller_obligation g nat (ReadNat u)
+    : guess_caller_obligation g i63 (Read_nat u)
   
   (* write 'Won !' iff the target is guessed *)
   | write_won_iff_guessed (msg : string) (g : guess_state)
                           (H : g = Guessed <-> msg = "Won !")
     : guess_caller_obligation g unit (Write msg).
 
-Definition guess_contract (target : nat) : contract CONSOLE guess_state :=
+Definition guess_contract (target : i63) : contract CONSOLE guess_state :=
   {| witness_update := guess_update target
    ; caller_obligation := guess_caller_obligation
    ; callee_obligation := no_callee_obligation
@@ -101,7 +86,7 @@ Definition guess_contract (target : nat) : contract CONSOLE guess_state :=
 
 (* always allow retry (read_nat) *)
 Lemma allow_retry `{Provide ix CONSOLE} (g : guess_state) (u : unit)
-  : forall t : nat, pre (to_hoare (guess_contract t) (read_nat u)) g.
+  : forall t : i63, pre (to_hoare (guess_contract t) (read_nat u)) g.
 Proof.
   intro t.
   prove impure.
@@ -110,7 +95,7 @@ Qed.
 
 Lemma guess_respectful `{Provide ix CONSOLE} (g : guess_state) (u : unit)
     (init : g = Retry) (max_attempt : nat)
-  : forall t : nat, pre (to_hoare (guess_contract t) (guess t max_attempt)) g.
+  : forall t : i63, pre (to_hoare (guess_contract t) (guess t max_attempt)) g.
 Proof.
   intro t.
   induction max_attempt.
@@ -118,20 +103,21 @@ Proof.
   - prove impure;  
     try (ssubst; constructor);
     try (unfold guess_update; rewrite equ_cond);
-    ssubst; now trivial.
+    ssubst; try now trivial. all: cbn.
+    all: now rewrite equ_cond. 
 Qed.
 
 (** * Aux functions to generate infinite flows *)
 CoFixpoint rep_inf {A : Type} (n:A) : Stream A := 
   Cons n (rep_inf n).
 
-CoFixpoint nat_inf (n:nat) : Stream nat := 
-  Cons n (nat_inf (S n)).
+CoFixpoint i63_inf (n : i63) : Stream i63 := 
+  Cons n (i63_inf (n + 1)).
 
 (** * Execution examples *)
-Definition base_semantic := console (nat_inf 0) [].
+Definition base_semantic := console (i63_inf 0) [].
 
-Compute (eval_effect base_semantic (ReadNat _)).
+(* Compute (eval_effect base_semantic (Read_nat _)). *)
 (* >> 0
 
 Compute (exec_effect base_semantic (Write "hello world !")).
