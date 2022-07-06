@@ -1,6 +1,6 @@
 (coq.extraction
  (prelude main)
- (theories FreeSpec.Example.Guess)
+ (theories Guess)
  (extracted_modules main))
 
 (executable

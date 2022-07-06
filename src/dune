@@ -1,4 +1,4 @@
 (coq.theory
- (name FreeSpec.Example.Guess)
- (theories FreeSpec.Example.ffi)
+ (name Guess)
+ (theories ffi)
  (flags -init-file build.v))

@@ -1,7 +1,7 @@
 From Coq Require Import Arith String Streams.
 From FreeSpec.Core Require Import Core CoreFacts.
 From FreeSpec.FFI Require Import FFI.
-From FreeSpec.Example.ffi Require Import Console.
+From ffi Require Import Console.
 
 Open Scope i63_scope.
 
@@ -14,7 +14,7 @@ CoFixpoint console (in_flow : Stream i63) (out_flow : list string)
   : semantics (CONSOLE) :=
   mk_semantics (fun α (c : CONSOLE α) =>
                   match c with
-                  | Read_nat _ => (
+                  | Read_int _ => (
                       Streams.hd in_flow,
                       console (Streams.tl in_flow) out_flow
                     )
@@ -25,20 +25,20 @@ CoFixpoint console (in_flow : Stream i63) (out_flow : list string)
 
 Fixpoint guess `{MonadConsole m, Monad m} (target : i63) (max_attempt : nat)
   : m unit :=
-match max_attempt with 
-| O => write "Game Over: max attempt limit exceeded"
-| S m =>
-  let* _ := write "Guess the number:" in
-  let* g := read_nat tt in 
-    if (g =? target)%i63 then 
-      write "Won !"
-    else if (g <? target)%i63 then 
-      write "The target is greater";;
-      guess target m
-    else 
-      write "The target is smaller";;
-      guess target m
-end.
+  match max_attempt with 
+  | O => write "Game Over: max attempt limit exceeded"
+  | S m =>
+    let* _ := write "Guess the number:" in
+    let* g := read_int tt in 
+      if (g =? target)%i63 then 
+        write "Won !"
+      else if (g <? target)%i63 then 
+        write "The target is greater";;
+        guess target m
+      else 
+        write "The target is smaller";;
+        guess target m
+  end.
 
 Inductive game_state : Type :=
 | Won : game_state
@@ -61,7 +61,7 @@ Inductive guess_state : Type :=
 Definition guess_update (target : i63)
   (g : guess_state) (α: Type) (c : CONSOLE α) (x : α) : guess_state :=
   match g,c,x with 
-  | Retry, Read_nat _, n =>
+  | Retry, Read_int _, n =>
     if (n =? target) then Guessed else Retry 
   | _, _, _ => g end.
 
@@ -69,7 +69,7 @@ Inductive guess_caller_obligation : guess_state ->
     forall (α : Type), CONSOLE α -> Prop :=
   (* can always retry for now *)
   | retry (u : unit) (g : guess_state)
-    : guess_caller_obligation g i63 (Read_nat u)
+    : guess_caller_obligation g i63 (Read_int u)
   
   (* write 'Won !' iff the target is guessed *)
   | write_won_iff_guessed (msg : string) (g : guess_state)
@@ -84,9 +84,9 @@ Definition guess_contract (target : i63) : contract CONSOLE guess_state :=
 
 (** * Proofs of guess_contract respectation by the program *)
 
-(* always allow retry (read_nat) *)
+(* always allow retry (read_int) *)
 Lemma allow_retry `{Provide ix CONSOLE} (g : guess_state) (u : unit)
-  : forall t : i63, pre (to_hoare (guess_contract t) (read_nat u)) g.
+  : forall t : i63, pre (to_hoare (guess_contract t) (read_int u)) g.
 Proof.
   intro t.
   prove impure.
@@ -117,7 +117,7 @@ CoFixpoint i63_inf (n : i63) : Stream i63 :=
 (** * Execution examples *)
 Definition base_semantic := console (i63_inf 0) [].
 
-(* Compute (eval_effect base_semantic (Read_nat _)). *)
+(* Compute (eval_effect base_semantic (Read_int _)). *)
 (* >> 0
 
 Compute (exec_effect base_semantic (Write "hello world !")).

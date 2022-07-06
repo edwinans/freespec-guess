@@ -1,8 +1,8 @@
 From Coq Require Extraction.
 From ExtLib Require Import MonadFix.
 From SimpleIO Require Import SimpleIO.
-From FreeSpec.Example.Guess Require Import Guess.
 From CoqFFI Require Import Int.
+From Guess Require Import Guess.
 
 Definition main : io_unit :=
   let target : i63 := 5 in 

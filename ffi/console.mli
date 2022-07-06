@@ -1,4 +1,4 @@
 
-val read_nat : unit -> int
+val read_int : unit -> int
 
 val write : string -> unit

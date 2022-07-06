@@ -2,7 +2,7 @@
  (name console))
 
 (coq.theory
- (name FreeSpec.Example.ffi))
+ (name ffi))
 
 (rule
  (target Console.v)
