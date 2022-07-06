@@ -1,0 +1,9 @@
+-Q _build/default/ffi ffi
+-Q _build/default/src Guess
+
+-arg -init-file
+-arg build.v
+
+_build/default/bin/main.v
+_build/default/ffi/Console.v
+_build/default/src/Guess.v
