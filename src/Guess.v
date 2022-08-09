@@ -25,17 +25,17 @@ CoFixpoint console (in_flow : Stream i63) (out_flow : list string)
 
 Fixpoint guess `{MonadConsole m, Monad m} (target : i63) (max_attempt : nat)
   : m unit :=
-  match max_attempt with 
+  match max_attempt with
   | O => write "Game Over: max attempt limit exceeded"
   | S m =>
     let* _ := write "Guess the number:" in
-    let* g := read_int tt in 
-      if (g =? target)%i63 then 
+    let* g := read_int tt in
+      if (g =? target)%i63 then
         write "Won !"
-      else if (g <? target)%i63 then 
+      else if (g <? target)%i63 then
         write "The target is greater";;
         guess target m
-      else 
+      else
         write "The target is smaller";;
         guess target m
   end.
@@ -49,28 +49,28 @@ Inductive game_state : Type :=
 
 Record game : Type := mkGame
   { target : i63
-  ; max_attempt : nat 
+  ; max_attempt : nat
   ; state : game_state
   }.
 
 (** Simplified witness states *)
 Inductive guess_state : Type :=
-| Retry : guess_state 
+| Retry : guess_state
 | Guessed : guess_state.
 
 Definition guess_update (target : i63)
   (g : guess_state) (α: Type) (c : CONSOLE α) (x : α) : guess_state :=
-  match g,c,x with 
+  match g,c,x with
   | Retry, Read_int _, n =>
-    if (n =? target) then Guessed else Retry 
+    if (n =? target) then Guessed else Retry
   | _, _, _ => g end.
 
-Inductive guess_caller_obligation : guess_state -> 
+Inductive guess_caller_obligation : guess_state ->
     forall (α : Type), CONSOLE α -> Prop :=
   (* can always retry for now *)
   | retry (u : unit) (g : guess_state)
     : guess_caller_obligation g i63 (Read_int u)
-  
+
   (* write 'Won !' iff the target is guessed *)
   | write_won_iff_guessed (msg : string) (g : guess_state)
                           (H : g = Guessed <-> msg = "Won !")
@@ -93,25 +93,25 @@ Proof.
   constructor.
 Qed.
 
-Lemma guess_respectful `{Provide ix CONSOLE} (g : guess_state) (u : unit)
+Lemma guess_respectful `{Provide ix CONSOLE} (g : guess_state)
     (init : g = Retry) (max_attempt : nat)
   : forall t : i63, pre (to_hoare (guess_contract t) (guess t max_attempt)) g.
 Proof.
   intro t.
   induction max_attempt.
   - prove impure. constructor. ssubst. split; now intro.
-  - prove impure;  
+  - prove impure;
     try (ssubst; constructor);
     try (unfold guess_update; rewrite equ_cond);
     ssubst; try now trivial. all: cbn.
-    all: now rewrite equ_cond. 
+    all: now rewrite equ_cond.
 Qed.
 
 (** * Aux functions to generate infinite flows *)
-CoFixpoint rep_inf {A : Type} (n:A) : Stream A := 
+CoFixpoint rep_inf {A : Type} (n:A) : Stream A :=
   Cons n (rep_inf n).
 
-CoFixpoint i63_inf (n : i63) : Stream i63 := 
+CoFixpoint i63_inf (n : i63) : Stream i63 :=
   Cons n (i63_inf (n + 1)).
 
 (** * Execution examples *)
